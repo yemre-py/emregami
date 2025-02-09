@@ -1,8 +1,11 @@
-package interfaces
+package services
 
-import "emregami/internal/services/dto"
+import (
+	"context"
+	"emregami/internal/services/dto"
+)
 
 type AuthService interface {
-	Register(request *dto.RegisterRequest) (*dto.RegisterResponse, error)
-	Login(request *dto.LoginRequest) (*dto.LoginResponse, error)
+	Register(ctx context.Context, request *dto.RegisterRequest) (*dto.RegisterResponse, error)
+	Login(ctx context.Context, request *dto.LoginRequest) (*dto.LoginResponse, error)
 }
