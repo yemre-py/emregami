@@ -7,6 +7,6 @@ type RegisterRequest struct {
 }
 
 type RegisterResponse struct {
-	Message string `json:"message"`
-	Tokens
+	Message string
+	Tokens  Tokens
 }

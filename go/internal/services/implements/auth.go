@@ -6,6 +6,7 @@ import (
 	"emregami/internal/repository/repos"
 	"emregami/internal/services/dto"
 	services "emregami/internal/services/interfaces"
+	"emregami/pkg/tokens"
 	"emregami/pkg/utils"
 	"emregami/pkg/validations"
 	"errors"
@@ -37,7 +38,7 @@ func (s *service) Register(ctx context.Context, request *dto.RegisterRequest) (*
 		return nil, errors.New("failed to get user by username")
 	}
 
-	if user != nil {
+	if user == nil {
 		return nil, errors.New("user already exists")
 	}
 
@@ -46,7 +47,7 @@ func (s *service) Register(ctx context.Context, request *dto.RegisterRequest) (*
 		return nil, errors.New("failed to get user by email")
 	}
 
-	if email != nil {
+	if email == nil {
 		return nil, errors.New("email already exists")
 	}
 
@@ -76,17 +77,52 @@ func (s *service) Register(ctx context.Context, request *dto.RegisterRequest) (*
 	}
 
 	// generate tokens
-	tokens, err := utils.GenerateTokens(auth.ID)
+	accessToken, refreshToken, err := tokens.GenerateTokens(auth.ID)
 	if err != nil {
 		return nil, errors.New("failed to generate tokens")
 	}
 
 	return &dto.RegisterResponse{
 		Message: "User registered successfully",
-		Tokens:  tokens,
+		Tokens: dto.Tokens{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		},
 	}, nil
 }
 
-func (s *service) Login(request *dto.LoginRequest) (*dto.LoginResponse, error) {
-	return nil, nil
+func (s *service) Login(ctx context.Context, request *dto.LoginRequest) (*dto.LoginResponse, error) {
+	// input validation
+	if err := s.validate.Struct(request); err != nil {
+		return nil, errors.New("invalid request")
+	}
+
+	// check if user exists
+	user, err := s.authRepository.GetByUsername(ctx, request.Username)
+	if err != nil {
+		return nil, errors.New("failed to get user by username")
+	}
+
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+
+	// compare password
+	if err := utils.ComparePassword(request.Password, user.Password); err != nil {
+		return nil, errors.New("invalid password")
+	}
+
+	// generate tokens
+	accessToken, refreshToken, err := tokens.GenerateTokens(user.ID)
+	if err != nil {
+		return nil, errors.New("failed to generate tokens")
+	}
+
+	return &dto.LoginResponse{
+		Message: "User logged in successfully",
+		Tokens: dto.Tokens{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		},
+	}, nil
 }
